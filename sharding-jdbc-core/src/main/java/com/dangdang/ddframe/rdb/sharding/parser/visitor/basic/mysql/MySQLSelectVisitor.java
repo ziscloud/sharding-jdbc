@@ -17,8 +17,6 @@
 
 package com.dangdang.ddframe.rdb.sharding.parser.visitor.basic.mysql;
 
-import java.util.List;
-
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLOrderBy;
 import com.alibaba.druid.sql.ast.expr.SQLAggregateExpr;
@@ -32,6 +30,7 @@ import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLSelectItem;
 import com.alibaba.druid.sql.ast.statement.SQLSelectOrderByItem;
 import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
+import com.alibaba.druid.sql.ast.statement.SQLSubqueryTableSource;
 import com.alibaba.druid.sql.dialect.mysql.ast.expr.MySqlSelectGroupByExpr;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.alibaba.druid.sql.dialect.mysql.visitor.MySqlOutputVisitor;
@@ -43,6 +42,8 @@ import com.dangdang.ddframe.rdb.sharding.parser.result.merger.OrderByColumn;
 import com.dangdang.ddframe.rdb.sharding.parser.result.merger.OrderByColumn.OrderByType;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+
+import java.util.List;
 
 /**
  * MySQL的SELECT语句访问器.
@@ -56,9 +57,14 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
     // TODO 封装到方法内部
     private int itemIndex;
     
+    private int subQueryIndex;
+    
     @Override
     protected void printSelectList(final List<SQLSelectItem> selectList) {
         super.printSelectList(selectList);
+        if (subQueryIndex > 0) {
+            return;
+        }
         // TODO 提炼成print，或者是否不应该由token的方式替换？
         getSQLBuilder().appendToken(AUTO_GEN_TOKE_KEY, false);
     }
@@ -72,6 +78,11 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
         return super.visit(x);
     }
     
+    public boolean visit(final SQLSubqueryTableSource x) {
+        subQueryIndex++;
+        return super.visit(x);
+    }
+    
     /**
      * 解析 {@code SELECT item1,item2 FROM }中的item.
      * 
@@ -80,6 +91,9 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
      */
     // TODO SELECT * 导致index不准，不支持SELECT *，且生产环境不建议使用SELECT *
     public boolean visit(final SQLSelectItem x) {
+        if (subQueryIndex > 0) {
+            return super.visit(x);
+        }
         itemIndex++;
         if (Strings.isNullOrEmpty(x.getAlias())) {
             SQLExpr expr = x.getExpr();
@@ -98,6 +112,9 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
     
     @Override
     public boolean visit(final SQLAggregateExpr x) {
+        if (subQueryIndex > 0) {
+            return super.visit(x);
+        }
         if (!(x.getParent() instanceof SQLSelectItem)) {
             return super.visit(x);
         }
@@ -121,6 +138,9 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
     }
     
     public boolean visit(final SQLOrderBy x) {
+        if (subQueryIndex > 0) {
+            return super.visit(x);
+        }
         for (SQLSelectOrderByItem each : x.getItems()) {
             SQLExpr expr = each.getExpr();
             OrderByType orderByType = null == each.getType() ? OrderByType.ASC : OrderByType.valueOf(each.getType());
@@ -144,6 +164,9 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
      */
     @Override
     public boolean visit(final MySqlSelectGroupByExpr x) {
+        if (subQueryIndex > 0) {
+            return super.visit(x);
+        }
         String alias = getParseContext().generateDerivedColumnAlias();
         OrderByType orderByType = null == x.getType() ? OrderByType.ASC : OrderByType.valueOf(x.getType());
         if (x.getExpr() instanceof SQLPropertyExpr) {
@@ -164,6 +187,9 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
      */
     @Override
     public boolean visit(final MySqlSelectQueryBlock.Limit x) {
+        if (subQueryIndex > 0) {
+            return super.visit(x);
+        }
         print("LIMIT ");
         int offset = 0;
         if (null != x.getOffset()) {
@@ -187,6 +213,11 @@ public class MySQLSelectVisitor extends AbstractMySQLVisitor {
         }
         getParseContext().getParsedResult().getMergeContext().setLimit(new Limit(offset, rowCount));
         return false;
+    }
+    
+    public void endVisit(final SQLSubqueryTableSource x) {
+        subQueryIndex--;
+        super.endVisit(x);
     }
     
     @Override

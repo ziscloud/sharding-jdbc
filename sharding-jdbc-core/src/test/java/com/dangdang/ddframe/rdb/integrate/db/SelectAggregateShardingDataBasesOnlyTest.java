@@ -17,17 +17,17 @@
 
 package com.dangdang.ddframe.rdb.integrate.db;
 
-import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
 import com.dangdang.ddframe.rdb.sharding.api.ShardingDataSource;
 import org.dbunit.DatabaseUnitException;
 import org.hamcrest.core.Is;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -58,6 +58,12 @@ public final class SelectAggregateShardingDataBasesOnlyTest extends AbstractShar
             assertThat(rs.getInt(1), is(40));
             assertThat(rs.next(), is(false));
         }
+    }
+    
+    @Test
+    public void assertSelectCountSubQuery() throws SQLException, DatabaseUnitException {
+        String sql = "SELECT COUNT(0) AS `orders_count` FROM (select * from `t_order` order by order_id)";
+        assertDataSet("integrate/dataset/db/expect/select_aggregate/SelectCount.xml", shardingDataSource.getConnection(), "t_order", sql);
     }
     
     @Test
@@ -141,6 +147,14 @@ public final class SelectAggregateShardingDataBasesOnlyTest extends AbstractShar
     public void assertSelectCountWithBindingTable() throws SQLException, DatabaseUnitException {
         String sql = "SELECT COUNT(*) AS `items_count` FROM `t_order` o JOIN `t_order_item` i ON o.user_id = i.user_id AND o.order_id = i.order_id"
                 + " WHERE o.`user_id` IN (?, ?) AND o.`order_id` BETWEEN ? AND ?";
+        assertDataSet("integrate/dataset/db/expect/select_aggregate/SelectCountWithBindingTable_0.xml", shardingDataSource.getConnection(), "t_order_item", sql, 10, 19, 1000, 1909);
+        assertDataSet("integrate/dataset/db/expect/select_aggregate/SelectCountWithBindingTable_1.xml", shardingDataSource.getConnection(), "t_order_item", sql, 1, 9, 1000, 1909);
+    }
+    
+    @Test
+    public void assertSelectCountWithBindingTableAndSubQuery() throws SQLException, DatabaseUnitException {
+        String sql = "SELECT COUNT(0) AS `items_count` FROM (SELECT o.* FROM `t_order` o JOIN `t_order_item` i ON o.user_id = i.user_id AND o.order_id = i.order_id"
+                + " WHERE o.`user_id` IN (?, ?) AND o.`order_id` BETWEEN ? AND ?)";
         assertDataSet("integrate/dataset/db/expect/select_aggregate/SelectCountWithBindingTable_0.xml", shardingDataSource.getConnection(), "t_order_item", sql, 10, 19, 1000, 1909);
         assertDataSet("integrate/dataset/db/expect/select_aggregate/SelectCountWithBindingTable_1.xml", shardingDataSource.getConnection(), "t_order_item", sql, 1, 9, 1000, 1909);
     }
