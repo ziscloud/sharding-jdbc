@@ -6,7 +6,9 @@ weight = 1
 
 # Release Notes
 
-## 1.2.2-SNAPSHOT
+## 1.3.1-SNAPSHOT
+
+## 1.3.0
 
 ### 新功能
 
@@ -15,6 +17,7 @@ weight = 1
 ### 功能提升
 
 1. [ISSUE #82](https://github.com/dangdangdotcom/sharding-jdbc/issues/82) TableRule可传入dataSourceName属性，用于指定该TableRule对应的数据源
+1. [ISSUE #88](https://github.com/dangdangdotcom/sharding-jdbc/issues/88) 放开对其他数据库的限制，可支持标准SQL, 对个性化分页等语句不支持
 
 ### 缺陷修正
 
