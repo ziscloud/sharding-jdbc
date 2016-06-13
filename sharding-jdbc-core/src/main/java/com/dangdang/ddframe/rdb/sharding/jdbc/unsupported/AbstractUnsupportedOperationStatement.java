@@ -17,7 +17,6 @@
 
 package com.dangdang.ddframe.rdb.sharding.jdbc.unsupported;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
@@ -40,7 +39,7 @@ public abstract class AbstractUnsupportedOperationStatement extends WrapperAdapt
     public final void setFetchDirection(final int direction) throws SQLException {
         throw new SQLFeatureNotSupportedException("setFetchDirection");
     }
-
+    
     @Override
     public final void addBatch(final String sql) throws SQLException {
         throw new SQLFeatureNotSupportedException("addBatch sql");

@@ -38,7 +38,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public final class MasterSlaveDataSource extends AbstractDataSourceAdapter {
     
-    private static final ThreadLocal<Boolean> WAS_UPDATED = new ThreadLocal<Boolean>() {
+    private static final ThreadLocal<Boolean> DML_FLAG = new ThreadLocal<Boolean>() {
         
         @Override
         protected Boolean initialValue() {
@@ -61,8 +61,8 @@ public final class MasterSlaveDataSource extends AbstractDataSourceAdapter {
      * @return 主或从节点的数据源
      */
     public DataSource getDataSource(final SQLStatementType sqlStatementType) {
-        if (SQLStatementType.SELECT != sqlStatementType || WAS_UPDATED.get() || HintManagerHolder.isMasterRouteOnly()) {
-            WAS_UPDATED.set(true);
+        if (SQLStatementType.SELECT != sqlStatementType || DML_FLAG.get() || HintManagerHolder.isMasterRouteOnly()) {
+            DML_FLAG.set(true);
             return masterDataSource;
         }
         return slaveLoadBalanceStrategy.getDataSource(name, slaveDataSources);
@@ -86,5 +86,12 @@ public final class MasterSlaveDataSource extends AbstractDataSourceAdapter {
     @Override
     public Connection getConnection() throws SQLException {
         throw new UnsupportedOperationException("Master slave data source cannot support get connection directly.");
+    }
+    
+    /**
+     * 重置更新标记.
+     */
+    public static void resetDMLFlag() {
+        DML_FLAG.remove();
     }
 }
